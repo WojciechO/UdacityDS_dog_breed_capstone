@@ -1,0 +1,8 @@
+.DS_Store
+
+.ipynb_checkpoints/
+.ipynb_checkpoints/*
+
+
+#excludin base resnet model due to its size
+/web_app/models/base_resnet.hd
