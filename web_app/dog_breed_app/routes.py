@@ -1,10 +1,12 @@
+from dog_breed_app import app
+
 import os
 import sys
 
 # Flask
 from flask import Flask, redirect, url_for, request, render_template, Response, jsonify, redirect
 from werkzeug.utils import secure_filename
-from gevent.pywsgi import WSGIServer
+# from gevent.pywsgi import WSGIServer
 
 # TensorFlow and tf.keras
 import tensorflow as tf
@@ -16,11 +18,7 @@ from tensorflow.keras.preprocessing import image
 
 # Some utilites
 import numpy as np
-from util import base64_to_pil
-
-
-# Declare a flask app
-app = Flask(__name__)
+from .util import base64_to_pil
 
 
 # You can use pretrained model from Keras
@@ -87,11 +85,3 @@ def predict():
         return jsonify(result=result, probability=pred_proba)
 
     return None
-
-
-if __name__ == '__main__':
-    # app.run(port=5002, threaded=False)
-
-    # Serve the app with gevent
-    http_server = WSGIServer(('0.0.0.0', 5000), app)
-    http_server.serve_forever()
