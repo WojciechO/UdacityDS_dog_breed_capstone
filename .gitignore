@@ -5,4 +5,4 @@
 
 
 #excludin base resnet model due to its size
-/web_app/models/base_resnet.hd
+web_app/dog_breed_app/models/base_resnet.hd
