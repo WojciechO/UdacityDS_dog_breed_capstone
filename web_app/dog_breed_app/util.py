@@ -13,6 +13,10 @@ from io import BytesIO
 import cv2  
 from keras.models import load_model
 from keras.applications.resnet import ResNet50
+from tensorflow.keras.preprocessing import image
+
+from tensorflow.keras.applications.imagenet_utils import preprocess_input, decode_predictions
+
 
 
 # image processing
@@ -28,6 +32,13 @@ def pil_to_grey(PIL_image):
     '''Converts PIL Image to a  cv2 GRAY representation'''
     img_bgr = cv2.cvtColor(np.array(PIL_image), cv2.COLOR_RGB2BGR)
     return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+
+def pil_to_tensor(PIL_image):
+    '''Converts PIL Image to a 4d tensot, accrepted by TF models '''
+    img = PIL_image.resize((224, 224))
+    x = image.img_to_array(img)
+    # convert 3D tensor to 4D tensor with shape (1, 224, 224, 3) and return 4D tensor
+    return np.expand_dims(x, axis=0)
 
 def np_to_base64(img_np):
     """
@@ -75,5 +86,21 @@ def face_detector(img, face_detection_model):
     faces = face_detection_model.detectMultiScale(gray_img)
 
     return len(faces) > 0
+
+
+def ResNet50_predict_labels(PIL_img, resnet_model):
+    # returns prediction vector for provided PIL image
+    img = preprocess_input(pil_to_tensor(PIL_img))
+    return np.argmax(resnet_model.predict(img))
+
+def dog_detector(PIL_img, resnet_model):
+    '''Functnion verifying if there is dog in the provided picture. 
+    Based on the base Resnet50 model, trained on the whole Imagenet.
+    Dog classes in the Imagenet have labels between 151 and 268 
+    '''
+    prediction = ResNet50_predict_labels(PIL_img, resnet_model)
+    return ((prediction <= 268) & (prediction >= 151)) 
+
+
 
 
