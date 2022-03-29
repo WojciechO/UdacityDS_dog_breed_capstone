@@ -2,6 +2,7 @@
 """
 import re
 import base64
+import pickle
 
 import numpy as np
 
@@ -12,10 +13,12 @@ from io import BytesIO
 
 import cv2  
 from keras.models import load_model
-from keras.applications.resnet import ResNet50
-from tensorflow.keras.preprocessing import image
+from keras.applications.resnet50 import ResNet50, preprocess_input as preprocess_input_resnet
+from keras.preprocessing import image
 
-from tensorflow.keras.applications.imagenet_utils import preprocess_input, decode_predictions
+import tensorflow as tf
+
+from keras.applications.imagenet_utils import preprocess_input
 
 
 
@@ -55,13 +58,15 @@ def load_models():
     RETURNS:
     face_cascade -- Cascade face recognition model
     base_resnet -- Base Resnet model, trained on IMagenet
+    base_resnet_no_top - Base Renset model without the final dense layer
     breed_prediction_model -- Model predicting dog breeds
+    dog_names - array with dog breeds
     '''
     package_directory = os.path.dirname(os.path.abspath(__file__))
     filename_haars_cascade = os.path.join(package_directory, './models/haarcascade_frontalface_alt.xml')
     filename_breed_pred = os.path.join(package_directory, './models/resnet_breed_prediction.hd')
-
-    print(package_directory)
+    filename_base_resnet_no_top = os.path.join(package_directory, './models/base_resnet_no_top.hd')
+    filename_dog_names = os.path.join(package_directory, './models/dog_labels.pkl')
 
     face_cascade = cv2.CascadeClassifier(filename_haars_cascade)
     #cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
@@ -70,14 +75,26 @@ def load_models():
     # In local development, the base Resnet can be stored locally, to speed up the loading
     #base_resnet = load_model('./models/base_resnet.hd')
     base_resnet = ResNet50(weights='imagenet')
-    base_resnet.make_predict_function()
+    base_resnet._make_predict_function()
     print('Loaded base Resnet model')
 
+    base_resnet_no_top = ResNet50(weights='imagenet', include_top=False)
+    base_resnet_no_top._make_predict_function()
+    # base_resnet_no_top = load_model(filename_base_resnet_no_top)
+    print('Loaded base Resnet model without last dense layer')
+
     breed_prediction_model = load_model(filename_breed_pred)
-    breed_prediction_model.make_predict_function()
+    breed_prediction_model._make_predict_function()
+    
+    global model_graph
+    model_graph = tf.get_default_graph() 
     print('Loaded breed reconigtion model')
 
-    return face_cascade, base_resnet , breed_prediction_model
+    with open(filename_dog_names, 'rb') as f:
+        dog_names = pickle.load(f)
+
+
+    return face_cascade, base_resnet , base_resnet_no_top, breed_prediction_model, dog_names
 
 def face_detector(img, face_detection_model):
     ''' Function using provided face detection model, returning true when at leat one human face was detected in the picture'''
@@ -89,17 +106,43 @@ def face_detector(img, face_detection_model):
 
 
 def ResNet50_predict_labels(PIL_img, resnet_model):
-    # returns prediction vector for provided PIL image
+    ''' returns prediction vector for provided PIL image '''
     img = preprocess_input(pil_to_tensor(PIL_img))
     return np.argmax(resnet_model.predict(img))
 
 def dog_detector(PIL_img, resnet_model):
-    '''Functnion verifying if there is dog in the provided picture. 
+    '''Function verifying if there is dog in the provided picture. 
     Based on the base Resnet50 model, trained on the whole Imagenet.
     Dog classes in the Imagenet have labels between 151 and 268 
     '''
     prediction = ResNet50_predict_labels(PIL_img, resnet_model)
     return ((prediction <= 268) & (prediction >= 151)) 
+
+
+def Resnet50_predict_breed(PIL_img, dog_names, base_resnet_no_top, resnet_model):
+    '''Function returning dog breed prediction.
+    Model uses transfer learning from base Resent, so input needs to be transformed to the nottleneck features
+    INPUT:
+    PIL_img: image in PIL format
+    dog_names: array with dog breeds from the Imagenet
+    base_resnet_no_top: Base Resnet50 model without the final dense layer
+    resnet_model: Final ResNet model, which predicts the dog breed
+
+    RETURNS:
+    predicted dog breed
+    '''
+    img = preprocess_input_resnet(pil_to_tensor(PIL_img))
+
+    # extract bottleneck features
+    bottleneck_feature = base_resnet_no_top.predict(img)
+    print('bottle neck obtained')
+    print(bottleneck_feature.shape)
+    # obtain predicted vector
+    resnet_model._make_predict_function()
+    with model_graph.as_default():
+        predicted_vector = resnet_model.predict(bottleneck_feature)
+    # return dog breed that is predicted by the model
+    return dog_names[np.argmax(predicted_vector)]
 
 
 
