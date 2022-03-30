@@ -1,1 +1,1 @@
-web gunicorn dog_breed:app
+web gunicorn dog_breed_app:app
