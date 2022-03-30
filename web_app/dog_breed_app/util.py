@@ -65,7 +65,7 @@ def load_models():
     package_directory = os.path.dirname(os.path.abspath(__file__))
     filename_haars_cascade = os.path.join(package_directory, './models/haarcascade_frontalface_alt.xml')
     filename_breed_pred = os.path.join(package_directory, './models/resnet_breed_prediction.hd')
-    filename_base_resnet_no_top = os.path.join(package_directory, './models/base_resnet_no_top.hd')
+    #filename_base_resnet_no_top = os.path.join(package_directory, './models/base_resnet_no_top.hd')
     filename_dog_names = os.path.join(package_directory, './models/dog_labels.pkl')
 
     face_cascade = cv2.CascadeClassifier(filename_haars_cascade)
@@ -86,6 +86,7 @@ def load_models():
     breed_prediction_model = load_model(filename_breed_pred)
     breed_prediction_model._make_predict_function()
     
+    #required workardound for issues with TF graph, which occur with TF < 2.0
     global model_graph
     model_graph = tf.get_default_graph() 
     print('Loaded breed reconigtion model')
@@ -139,6 +140,8 @@ def Resnet50_predict_breed(PIL_img, dog_names, base_resnet_no_top, resnet_model)
     print(bottleneck_feature.shape)
     # obtain predicted vector
     resnet_model._make_predict_function()
+
+    #required workardound for issues with TF graph, which occur with TF < 2.0
     with model_graph.as_default():
         predicted_vector = resnet_model.predict(bottleneck_feature)
     # return dog breed that is predicted by the model
