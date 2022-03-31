@@ -36,8 +36,11 @@ The final app algorithm consists of 3 models.
 
 
 ## Metrics
-To assess the dog breed prediction
-Final model achieves average accuracy of 81% across all breeds.
+Accuracy was used to assess the dog breed prediction model. There are 133 dog breeds in the training data set and final metric was calculated as average accuracy from all classes.  
+The metric showed great improvement as we moved through different deep learning architecture:
+* building a CNN from a scratch achieved ~3% of acuraccy
+* Using transfer learning from VGG16 model by removing the final dense layer and training it on the dog pictures only, increased the accuracy to 45%
+* Final approach used the transfer learning from ResNet50 model. After removing the final dense layer an additional Convoluted layer was added, followed by Global Average Pooling layer and the dense layer. Additionally droput and regularisation was included to tackle overfitting. The final model achieves average accuracy of 81% across all breeds.
 
 
 # Application overview
